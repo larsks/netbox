@@ -447,6 +447,15 @@ Default width (in pixels) of a unit within a rack elevation.
 
 ---
 
+## REMOTE_AUTH_AUTO_CREATE_GROUPS
+
+Default: `False`
+
+If `True`, NetBox will automatically create local groups to mirror
+remote user groups (requires `REMOTE_AUTH_GROUP_SYNC_ENABLED`).
+
+---
+
 ## REMOTE_AUTH_AUTO_CREATE_USER
 
 Default: `False`

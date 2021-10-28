@@ -179,6 +179,50 @@ class ExternalAuthenticationTestCase(TestCase):
     @override_settings(
         REMOTE_AUTH_ENABLED=True,
         REMOTE_AUTH_AUTO_CREATE_USER=True,
+        REMOTE_AUTH_AUTO_CREATE_GROUPS=True,
+        REMOTE_AUTH_GROUP_SYNC_ENABLED=True,
+        LOGIN_REQUIRED=True
+    )
+    def test_remote_auth_auto_create_groups(self):
+        """
+        Test auto creating groups with group sync enabled.
+        """
+
+        group_names = [
+            'Group 1',
+            'Group 2',
+            'Group 3',
+        ]
+
+        headers = {
+            'HTTP_REMOTE_USER': 'remoteuser2',
+            'HTTP_REMOTE_USER_GROUP': '|'.join(group_names),
+        }
+
+        self.assertTrue(settings.REMOTE_AUTH_ENABLED)
+        self.assertTrue(settings.REMOTE_AUTH_AUTO_CREATE_USER)
+        self.assertTrue(settings.REMOTE_AUTH_AUTO_CREATE_GROUPS)
+        self.assertTrue(settings.REMOTE_AUTH_GROUP_SYNC_ENABLED)
+        self.assertEqual(settings.REMOTE_AUTH_HEADER, 'HTTP_REMOTE_USER')
+        self.assertEqual(settings.REMOTE_AUTH_GROUP_HEADER,
+                         'HTTP_REMOTE_USER_GROUP')
+        self.assertEqual(settings.REMOTE_AUTH_GROUP_SEPARATOR, '|')
+
+        response = self.client.get(reverse('home'), follow=True, **headers)
+        self.assertEqual(response.status_code, 200)
+
+        new_user = User.objects.get(username='remoteuser2')
+        self.assertEqual(int(self.client.session.get(
+            '_auth_user_id')), new_user.pk, msg='Authentication failed')
+
+        self.assertListEqual(
+            group_names,
+            [g.name for g in new_user.groups.all()],
+        )
+
+    @override_settings(
+        REMOTE_AUTH_ENABLED=True,
+        REMOTE_AUTH_AUTO_CREATE_USER=True,
         REMOTE_AUTH_GROUP_SYNC_ENABLED=True,
         LOGIN_REQUIRED=True
     )

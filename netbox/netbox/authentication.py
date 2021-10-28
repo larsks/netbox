@@ -104,17 +104,32 @@ class RemoteUserBackend(_RemoteUserBackend):
     def create_unknown_user(self):
         return settings.REMOTE_AUTH_AUTO_CREATE_USER
 
+    @property
+    def create_unknown_groups(self):
+        return settings.REMOTE_AUTH_AUTO_CREATE_GROUPS
+
     def configure_groups(self, user, remote_groups):
         logger = logging.getLogger('netbox.authentication.RemoteUserBackend')
 
-        # Assign default groups to the user
+        # Assign remote groups to the user
         group_list = []
         for name in remote_groups:
             try:
-                group_list.append(Group.objects.get(name=name))
+                if self.create_unknown_groups:
+                    group, created = Group._default_manager.get_or_create(name=name)
+                    if created:
+                        logger.debug(f"Created group {name}")
+                else:
+                    group = Group.objects.get(name=name)
+
+                group_list.append(group)
             except Group.DoesNotExist:
-                logging.error(
-                    f"Could not assign group {name} to remotely-authenticated user {user}: Group not found")
+                if settings.REMOTE_AUTH_AUTO_CREATE_GROUPS:
+                    group_list.append(Group.objects.create(name=name))
+                else:
+                    logging.error(
+                        f"Could not assign group {name} to remotely-authenticated user {user}: Group not found")
+
         if group_list:
             user.groups.set(group_list)
             logger.debug(
